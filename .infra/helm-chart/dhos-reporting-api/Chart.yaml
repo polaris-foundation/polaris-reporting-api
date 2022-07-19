@@ -1,0 +1,4 @@
+apiVersion: v1
+name: dhos-reporting-api
+description: DHOS REPORTING API
+version: 1.0.0

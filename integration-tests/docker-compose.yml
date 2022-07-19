@@ -1,0 +1,71 @@
+x-environment:
+  &COMMON_ENVIRONMENT
+  ENVIRONMENT: DEVELOPMENT
+  DATABASE_HOST: postgres-db
+  DATABASE_PORT: 5432
+  DATABASE_USER: postgres-user
+  DATABASE_PASSWORD: TopSecretPassword
+  LOG_LEVEL: DEBUG
+  LOG_FORMAT: COLOUR
+  SERVER_TIMEZONE: Europe/London
+
+services:
+  dhos-reporting-integration-tests:
+    container_name: "dhos-reporting-integration-tests"
+    build:
+      context: ./
+      args:
+        - PIP_EXTRA_INDEX_URL
+    environment:
+      <<: *COMMON_ENVIRONMENT
+      PRODUCT_NAME: testproduct
+      BEHAVE_ARGS: ${BEHAVE_ARGS:-}
+      REPORT_PORTAL_URL: ${REPORT_PORTAL_URL:-}
+      REPORT_PORTAL_TOKEN: ${REPORT_PORTAL_TOKEN:-}
+      REPORT_PORTAL_PROJECT: ${REPORT_PORTAL_PROJECT:-}
+      ENVIRONMENT: ${ENVIRONMENT:-}
+      RELEASE: ${RELEASE:-}
+      SYSTEM_JWT_SCOPE: >-
+        read:reports_all write:reports_all
+    command: >
+      bash -c "behave --no-capture --no-logcapture ${BEHAVE_ARGS:-}"
+    depends_on:
+      "dhos-reporting-api":
+        condition: service_healthy
+
+  dhos-reporting-api:
+    container_name: "dhos-reporting-api"
+    build:
+      context: ..
+      args:
+        - GEMFURY_DOWNLOAD_KEY
+    environment:
+      <<: *COMMON_ENVIRONMENT
+      DATABASE_NAME: dhos-reporting-api-db
+    command: >-
+      bash -c "flask db upgrade 
+      && python -m dhos_reporting_api"
+    depends_on:
+      "postgres-db":
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:5000/running || false
+      interval: 3s
+      retries: 40
+      start_period: 5s
+    ports:
+      - "5000:5000"
+
+  postgres-db:
+    container_name: "postgres-db"
+    build:
+      context: ./postgres-db
+    environment:
+      - POSTGRES_USER=postgres-user
+      - POSTGRES_PASSWORD=TopSecretPassword
+      - POSTGRES_MULTIPLE_DATABASES="dhos-reporting-api-db"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER}" ]
+      interval: 2s
+      timeout: 5s
+      retries: 20

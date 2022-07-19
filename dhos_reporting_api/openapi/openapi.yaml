@@ -1,0 +1,319 @@
+openapi: 3.0.3
+info:
+  description: A service for reporting PMCF information
+  title: DHOS Reporting API
+  version: 1.0.0
+paths:
+  /running:
+    get:
+      summary: Verify service is running
+      description: Verifies that the service is running. Used for monitoring in kubernetes.
+      tags:
+      - monitoring
+      responses:
+        '200':
+          description: If we respond, we are running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  running:
+                    type: boolean
+                    example: true
+      operationId: flask_batteries_included.blueprint_monitoring.app_running
+  /version:
+    get:
+      summary: Get version information
+      description: Get the version number, circleci build number, and git hash.
+      tags:
+      - monitoring
+      responses:
+        '200':
+          description: Version numbers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  circle:
+                    type: string
+                    example: '1234'
+                  hash:
+                    type: string
+                    example: 366c204
+      operationId: flask_batteries_included.blueprint_monitoring.app_version
+  /dhos/v1/weekly_active_patients:
+    put:
+      summary: Update the weekly active patient data
+      tags:
+      - patient
+      parameters:
+      - name: product_name
+        in: query
+        required: true
+        description: Product with which patients should be associated
+        schema:
+          type: string
+          example: GDM
+      - name: trust
+        in: query
+        required: true
+        description: Trust code / short name
+        schema:
+          type: string
+          example: DEV
+      requestBody:
+        x-body-name: weekly_active_patient_counts
+        description: List of year-weeks with count of active patients
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/WeeklyActivePatientCountsRequest'
+      responses:
+        '204':
+          description: Update successful
+        default:
+          description: Error, e.g. 400 Bad Request, 503 Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: dhos_reporting_api.blueprint_api.update_weekly_active_patients
+    get:
+      summary: Get weekly active patients
+      tags:
+      - patient
+      parameters:
+      - name: product_name
+        in: query
+        required: false
+        description: Name of product
+        schema:
+          type: string
+          example: GDM
+      - name: trust
+        in: query
+        required: false
+        description: Restrict return data to specific Trust
+        schema:
+          type: string
+          example: DEV
+      responses:
+        '200':
+          description: List of active patients by year and week
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WeeklyActivePatientCountsResponse'
+        default:
+          description: Error, e.g. 400 Bad Request, 503 Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: dhos_reporting_api.blueprint_api.get_weekly_active_patients
+  /dhos/v1/daily_created_patients:
+    put:
+      summary: Create daily patient count data
+      tags:
+      - patient
+      parameters:
+      - name: product_name
+        in: query
+        required: true
+        description: Product with which patients should be associated
+        schema:
+          type: string
+          example: GDM
+      - name: trust
+        in: query
+        required: true
+        description: Trust code / short name
+        schema:
+          type: string
+          example: DEV
+      requestBody:
+        x-body-name: daily_created_patients
+        description: List of dates with count of created patients
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/DailyCreatedPatientCountsRequest'
+      responses:
+        '204':
+          description: Update successful
+        default:
+          description: Error, e.g. 400 Bad Request, 503 Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: dhos_reporting_api.blueprint_api.update_daily_created_patients
+    get:
+      summary: Get daily created patients
+      tags:
+      - patient
+      parameters:
+      - name: product_name
+        in: query
+        required: false
+        description: Name of product
+        schema:
+          type: string
+          example: GDM
+      - name: trust
+        in: query
+        required: false
+        description: Restrict return data to specific Trust
+        schema:
+          type: string
+          example: DEV
+      responses:
+        '200':
+          description: List of created patients by date
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DailyCreatedPatientCountsResponse'
+        default:
+          description: Error, e.g. 400 Bad Request, 503 Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: dhos_reporting_api.blueprint_api.get_daily_created_patients
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+          description: HTTP response code
+          example: 404
+        message:
+          type: string
+          description: Message attached to response
+          example: Not Found
+      required:
+      - code
+      description: An error response in json format
+    WeeklyActivePatientCountsRequest:
+      type: object
+      properties:
+        year_week:
+          type: string
+          description: The year and week that the data covers
+          example: 2021-33
+        count:
+          type: integer
+          description: Total count of active patients in time period
+          example: 100
+      required:
+      - count
+      - year_week
+    WeeklyActivePatientCountsResponse:
+      type: object
+      properties:
+        year_week:
+          type: string
+          description: The year and week that the data covers
+          example: 2021-33
+        count:
+          type: integer
+          description: Total count of active patients in time period
+          example: 100
+        product_name:
+          type: string
+          description: The name of the product for which the patients are active
+          example: GDM
+        trust:
+          type: string
+          description: Name of the Trust where these patients are active
+          example: DEV
+      required:
+      - count
+      - product_name
+      - trust
+      - year_week
+    DailyCreatedPatientCountsRequest:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: The day the data covers
+          example: '2021-01-01'
+        count:
+          type: integer
+          description: Total count of active patients in time period
+          example: 100
+      required:
+      - count
+      - date
+    DailyCreatedPatientCountsResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: The day the data covers
+          example: '2021-01-01'
+        count:
+          type: integer
+          description: Total count of active patients in time period
+          example: 100
+        product_name:
+          type: string
+          description: The name of the product for which the patients are created
+          example: GDM
+        trust:
+          type: string
+          description: Name of the Trust where these patients are created
+          example: DEV
+      required:
+      - count
+      - date
+      - product_name
+      - trust
+  responses:
+    BadRequest:
+      description: Bad or malformed request was received
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: The specified resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: Service or dependent resource not available
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
