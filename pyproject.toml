@@ -1,14 +1,10 @@
 [tool.poetry]
 name = "dhos-reporting-api"
 version = "0.0.1"
-description = "DHOS Reporting API"
+description = "Polaris Reporting API"
 authors = ["Andrew Gill <andrew.gill@sensynehealth.com>"]
 keywords = ["Reporting"]
-repository = "https://github.com/draysontechnologies/dhos-reporting-api"
-
-[[tool.poetry.source]]
-name = "sensynehealth"
-url = "https://pypi.fury.io/sensynehealth/"
+repository = "https://github.com/polaris-foundation/polaris-reporting-api"
 
 [tool.poetry.dependencies]
 python = "^3.9"
